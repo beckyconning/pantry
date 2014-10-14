@@ -3,7 +3,7 @@
   "preferGlobal": false,
   "version": "0.0.3",
   "author": "Software Co-operative Limited",
-  "description": "Information storage, retrieval and change reaction with Kefir and CouchDB",
+  "description": "Always up to date information storage and retrieval with Kefir and CouchDB.",
   "contributors": [
     {
       "name": "Becky Conning",
