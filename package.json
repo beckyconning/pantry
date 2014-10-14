@@ -1,9 +1,9 @@
 {
-  "name": "couch-init",
+  "name": "pantry",
   "preferGlobal": false,
   "version": "0.0.3",
-  "author": "Antwerp House Software Co-operative <hi@antwerphouse.coop>",
-  "description": "Module that provides couchdb initialisation and configuration methods",
+  "author": "Software Co-operative Limited",
+  "description": "Information storage, retrieval and change reaction with Kefir and CouchDB",
   "contributors": [
     {
       "name": "Becky Conning",
@@ -14,21 +14,24 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/beckyconning/couch-init"
+    "url": "https://github.com/beckyconning/pantry"
   },
   "keywords": [
-    "couchdb"
+    "couchdb",
+    "frp",
+    "kefir"
   ],
   "dependencies": {
     "async": "^0.9.0",
     "bluebird": "^2.3.5",
-    "request-promise": "^0.2.1"
+    "kefir": "^0.2.8",
+    "tcomb": "https://github.com/gcanti/tcomb/tarball/345f2ba45385d185b985cffb08723f664eacf60e",
+    "underscore": "^1.7.0"
   },
   "analyze": true,
   "devDependencies": {
     "jasmine-node": "https://github.com/mhevery/jasmine-node/tarball/Jasmine2.0",
-    "proxyquire": "^1.0.1",
-    "underscore": "^1.7.0"
+    "request-promise": "^0.2.1"
   },
   "bundledDependencies": [],
   "license": "MIT"
