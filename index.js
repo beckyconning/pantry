@@ -1,1 +1,1 @@
-module.exports = require('./lib/pantry');
+module.exports = require('./src/pantry');

@@ -1,2 +1,2 @@
-test:
-	./node_modules/.bin/jasmine-node --verbose ./spec/spec.js
+spec-node:
+	./node_modules/.bin/jasmine-node --verbose ./spec/pantry-spec.js

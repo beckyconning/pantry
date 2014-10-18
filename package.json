@@ -21,17 +21,32 @@
     "frp",
     "kefir"
   ],
+  "browserify": {
+    "request": "browser-request"
+  },
   "dependencies": {
-    "async": "^0.9.0",
     "bluebird": "^2.3.5",
+    "browser-request": "^0.3.2",
     "kefir": "^0.2.8",
+    "request": "^2.45.0",
     "tcomb": "https://github.com/gcanti/tcomb/tarball/345f2ba45385d185b985cffb08723f664eacf60e",
-    "underscore": "^1.7.0"
+    "underscore": "^1.7.0",
+    "valid-url": "^1.0.9"
   },
   "analyze": true,
   "devDependencies": {
+    "browserify": "^6.1.0",
+    "grunt-karma": "^0.9.0",
+    "grunt-shell": "^1.1.1",
+    "install": "^0.1.7",
     "jasmine-node": "https://github.com/mhevery/jasmine-node/tarball/Jasmine2.0",
-    "request-promise": "^0.2.1"
+    "karma": "^0.12.24",
+    "karma-bro": "^0.8.0",
+    "karma-chrome-launcher": "^0.1.5",
+    "karma-firefox-launcher": "^0.1.3",
+    "karma-jasmine": "^0.2.2",
+    "karma-story-reporter": "^0.2.2",
+    "npm": "^2.1.4"
   },
   "bundledDependencies": [],
   "license": "MIT"
