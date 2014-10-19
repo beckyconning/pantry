@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = function(grunt) {
 
     grunt.initConfig({
@@ -27,6 +29,7 @@ module.exports = function(grunt) {
                     './spec/*': ['browserify']
                 },
                 browserify: {
+                    plugin: ['proxyquireify/plugin'],
                     alias: ['request:browser-request'],
                     debug: true
                 },
