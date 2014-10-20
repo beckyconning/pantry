@@ -21,8 +21,9 @@
     "frp",
     "kefir"
   ],
-  "browserify": {
-    "request": "browser-request"
+  "browser": {
+    "request": "browser-request",
+    "proxyquire-wrapper": "proxyquireify"
   },
   "dependencies": {
     "bluebird": "^2.3.6",
@@ -49,6 +50,7 @@
     "karma-story-reporter": "^0.2.2",
     "npm": "^2.1.4",
     "proxyquire": "^1.0.1",
+    "proxyquire-universal": "https://github.com/bendrucker/proxyquire-universal/tarball/master",
     "proxyquireify": "^1.1.0"
   },
   "bundledDependencies": [],

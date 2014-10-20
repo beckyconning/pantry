@@ -1,10 +1,11 @@
 'use strict';
 
 describe('pantry', function () {
+    var proxyquire = require('proxyquire');
+
     var Kefir       = require('kefir');
     var Promise     = require('bluebird');
     var T           = require('tcomb');
-    var proxyquire  = require('proxyquire');
     var objectMerge = require('object-merge');
 
     var requestFake = function requestFake(options, callback) {
@@ -15,7 +16,6 @@ describe('pantry', function () {
             });
         };
     };
-
     var requestSpy = jasmine.createSpy('request').and.callFake(requestFake);
 
     var pantry = proxyquire('../src/pantry', { 'request': requestSpy });
