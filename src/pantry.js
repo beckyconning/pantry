@@ -38,19 +38,30 @@ var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
     var includeDocsQuery     = 'include_docs=true';
     var getCollectionQuery   = '?' +
         [startkeyQuery, endkeyQuery, updateSeqQuery, includeDocsQuery].join('&');
-    var uri                  = dbUrl + '/_all_docs' + getCollectionQuery;
-    var getCollectionOptions = { method: 'GET', uri: uri, json: true };
 
     var getCollection = function () {
-        return Kefir.fromCallback([requestBody, null, getCollectionOptions])
+        var uri = dbUrl + '/_all_docs' + getCollectionQuery;
+        var options = { method: 'GET', uri: uri, json: true };
+        return Kefir.fromCallback([requestBody, null, options])
+    };
+
+    var getChanges = function (updateSeq) {
+        var uri = dbUrl + '/_changes?feed=longpoll&since=' + updateSeq;
+        var options = { method: 'GET', uri: uri, json: true };
+
+        return Kefir.fromCallback([requestBody, null, options]);
     };
 
     var emptyCollection = Kefir.constant([]);
-    var initialCollection = emptyCollection.flatMapLatest(getCollection)
-        .pluck('rows')
+    var initialView = emptyCollection.flatMapLatest(getCollection);
+
+    var initialCollection = initialView.pluck('rows')
         .map(function (rows) { return rows.map(function (row) { return row.doc; }) });
 
-    return emptyCollection.merge(initialCollection)
+    var changes = initialView.pluck('update_seq')
+        .flatMapLatest(getChanges);
+
+    return emptyCollection.merge(initialCollection).merge(changes)
         .toProperty();
 });
 

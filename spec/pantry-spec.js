@@ -51,7 +51,8 @@ describe('pantry', function () {
     var collectionRows = collection.map(function (element) {
         return { doc: element };
     });
-    var getCollectionBody = { update_seq: 3, rows: collectionRows };
+    var updateSeq = 3;
+    var getCollectionBody = { update_seq: updateSeq, rows: collectionRows };
 
     beforeEach(function () {
         requestSpy.calls.reset();
@@ -73,9 +74,26 @@ describe('pantry', function () {
             };
 
             pantry.contents(couchDbUrl, dbName, docLabel)
-                .onValue(function () {} );
+                .onValue(function () {});
 
             expect(requestSpy.calls.mostRecent().args[0]).toEqual(getCollectionOptions);
+        });
+
+        it('should poll for changes after getting the update sequence', function (done) {
+            var getChangesOptions = {
+                method: 'GET',
+                uri: dbUrl + '/_changes?feed=longpoll&since=' + updateSeq,
+                json: true
+            };
+
+            pantry.contents(couchDbUrl, dbName, docLabel)
+                .onValue(function () {});
+
+            requestFake.flush(undefined, {}, getCollectionBody)
+                .then(function () {
+                    expect(requestSpy.calls.mostRecent().args[0]).toEqual(getChangesOptions);
+                    done();
+                });
         });
 
         describe('returned property', function () {
