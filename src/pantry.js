@@ -8,6 +8,11 @@ var validUrl       = require('valid-url');
 var objectMerge    = require('object-merge');
 
 var requestPromise = Promise.promisify(request);
+var requestBody = function (options, callback) {
+    request(options, function (error, response, body) {
+        callback(body);
+    });
+};
 
 T.Property = T.subtype(T.Obj, function (obj) {
     return obj instanceof Kefir.Property;
@@ -25,12 +30,32 @@ var Contents = T.func([T.Url, T.Str, T.Str], T.Property);
 var Put      = T.func([T.Url, T.Str, T.Str, T.Obj], T.Promise);
 var Pantry   = T.struct({ contents: Contents, put: Put });
 
-var contents = Contents.of(function (couchDbUrl, databaseName, docLabel) {
-    return Kefir.constant(0);
+var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
+    var dbUrl                = couchDbUrl + '/' + dbName;
+    var startkeyQuery        = 'startkey="' + docLabel + '_"';
+    var endkeyQuery          = 'endkey="' + docLabel + '_\ufff0"';
+    var updateSeqQuery       = 'update_seq=true';
+    var includeDocsQuery     = 'include_docs=true';
+    var getCollectionQuery   = '?' +
+        [startkeyQuery, endkeyQuery, updateSeqQuery, includeDocsQuery].join('&');
+    var uri                  = dbUrl + '/_all_docs' + getCollectionQuery;
+    var getCollectionOptions = { method: 'GET', uri: uri, json: true };
+
+    var getCollection = function () {
+        return Kefir.fromCallback([requestBody, null, getCollectionOptions])
+    };
+
+    var emptyCollection = Kefir.constant([]);
+    var initialCollection = emptyCollection.flatMapLatest(getCollection)
+        .pluck('rows')
+        .map(function (rows) { return rows.map(function (row) { return row.doc; }) });
+
+    return emptyCollection.merge(initialCollection)
+        .toProperty();
 });
 
-var put = Put.of(function (couchDbUrl, databaseName, docLabel, doc) {
-    var dbUrl = couchDbUrl + '/' + databaseName;
+var put = Put.of(function (couchDbUrl, dbName, docLabel, doc) {
+    var dbUrl = couchDbUrl + '/' + dbName;
     var uuidUrl = couchDbUrl + '/_uuids';
 
     var getUuidOptions = { method: 'GET', uri: uuidUrl, json: true };
@@ -43,8 +68,8 @@ var put = Put.of(function (couchDbUrl, databaseName, docLabel, doc) {
     var putDocFromUuid = T.func(T.Str, T.Promise)
         .of(function (uuid) {
             var labelledId       = docLabel + '_' + uuid
-            var newDocUrl        = dbUrl + '/' + labelledId;
-            var newDocUrlObject  = { uri: newDocUrl };
+             var newDocUrl        = dbUrl + '/' + labelledId;
+             var newDocUrlObject  = { uri: newDocUrl };
             var putNewDocOptions = objectMerge(putDocOptions, newDocUrlObject);
 
             return requestPromise(putNewDocOptions);
