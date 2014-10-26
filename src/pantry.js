@@ -63,21 +63,6 @@ var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
         return Kefir.fromCallback([requestBody, null, options]);
     };
 
-    var fromArrayHandler = function (emitter, event) {
-        if (event.type === 'end') {
-            emitter.end();
-        }
-        if (event.type === 'value') {
-            if (event.value) {
-                if (typeof event.value.length !== 'undefined') {
-                    event.value.forEach(emitter.emit);
-                } else {
-                    emitter.emit(event.value);
-                }
-            }
-        }
-    };
-
     var emptyCollection = Kefir.constant([]);
     var initialView = emptyCollection.flatMapLatest(getCollection);
 
@@ -88,7 +73,7 @@ var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
         .flatMapLatest(getChanges);
 
     var changedDocs = changes.pluck('results')
-        .withHandler(fromArrayHandler)
+        .transform()
         .filter(function (result) { return result.id.indexOf(docLabel) === 0; })
         .pluck('id')
         .flatMap(getDoc);
