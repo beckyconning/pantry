@@ -45,11 +45,37 @@ var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
         return Kefir.fromCallback([requestBody, null, options])
     };
 
-    var getChanges = function (updateSeq) {
+    var getChanges = function getChanges(updateSeq) {
         var uri = dbUrl + '/_changes?feed=longpoll&since=' + updateSeq;
         var options = { method: 'GET', uri: uri, json: true };
 
+        var firstChanges = Kefir.fromCallback([requestBody, null, options]);
+        var subsequentChanges = firstChanges.pluck('last_seq')
+            .flatMapLatest(getChanges);
+
+        return firstChanges.merge(subsequentChanges);
+    };
+
+    var getDoc = function (docId) {
+        var uri = dbUrl + '/' + docId;
+        var options = { method: 'GET', uri: uri, json: true };
+
         return Kefir.fromCallback([requestBody, null, options]);
+    };
+
+    var fromArrayHandler = function (emitter, event) {
+        if (event.type === 'end') {
+            emitter.end();
+        }
+        if (event.type === 'value') {
+            if (event.value) {
+                if (typeof event.value.length !== 'undefined') {
+                    event.value.forEach(emitter.emit);
+                } else {
+                    emitter.emit(event.value);
+                }
+            }
+        }
     };
 
     var emptyCollection = Kefir.constant([]);
@@ -61,7 +87,15 @@ var contents = Contents.of(function (couchDbUrl, dbName, docLabel) {
     var changes = initialView.pluck('update_seq')
         .flatMapLatest(getChanges);
 
-    return emptyCollection.merge(initialCollection).merge(changes)
+    var changedDocs = changes.pluck('results')
+        .withHandler(fromArrayHandler)
+        .filter(function (result) { return result.id.indexOf(docLabel) === 0; })
+        .pluck('id')
+        .flatMap(getDoc);
+
+    return emptyCollection.merge(initialCollection)
+        .merge(changes)
+        .merge(changedDocs)
         .toProperty();
 });
 
@@ -79,8 +113,8 @@ var put = Put.of(function (couchDbUrl, dbName, docLabel, doc) {
     var putDocFromUuid = T.func(T.Str, T.Promise)
         .of(function (uuid) {
             var labelledId       = docLabel + '_' + uuid
-             var newDocUrl        = dbUrl + '/' + labelledId;
-             var newDocUrlObject  = { uri: newDocUrl };
+            var newDocUrl        = dbUrl + '/' + labelledId;
+            var newDocUrlObject  = { uri: newDocUrl };
             var putNewDocOptions = objectMerge(putDocOptions, newDocUrlObject);
 
             return requestPromise(putNewDocOptions);

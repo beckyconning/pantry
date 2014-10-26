@@ -6,20 +6,22 @@ describe('pantry', function () {
     var Kefir       = require('kefir');
     var Promise     = require('bluebird');
     var T           = require('tcomb');
+    var _           = require('underscore');
     var objectMerge = require('object-merge');
-
-    var requestFake = function requestFake(options, callback) {
-        requestFake.flush = function (error, response, body) {
-            // return promise that is resolved after callback has been called
-            return new Promise(function (resolve) {
-                callback(error, response, body);
-                // resolve after timeout to ensure sync
-                setTimeout(resolve, 0);
-            });
-        };
-    };
+    var requestFake = require('./request-fake.js')
 
     var requestSpy = jasmine.createSpy('request').and.callFake(requestFake);
+
+    var hasBeenPassedFirstArgs = function (spy, firstArguments) {
+        var allFirstArgs = spy.calls.allArgs().map(function (args) {
+            return args[0];
+        });
+
+        var passedFirstArguments = firstArguments.filter(function (optionStruct) {
+            return _.findWhere(allFirstArgs, optionStruct);
+        });
+        return firstArguments.length === passedFirstArguments.length;
+    };
 
     var pantry = proxyquire('../src/pantry', { 'request': requestSpy });
 
@@ -46,15 +48,35 @@ describe('pantry', function () {
     var collection  = [
         { _id: 'preserve_ace2', _rev: '1-7273', name: 'Raspberry Jam', sodium: 0.1 },
         { _id: 'preserve_rap2', _rev: '1-3851', name: 'Cranberry Sauce', sodium: 0.12 },
-        { _id: 'preserve_4ab3', _rev: '1-4823', name: 'Onion Chutney', sodum: 0.18 }
+        { _id: 'preserve_4ab3', _rev: '1-4823', name: 'Onion Chutney', sodum: 0.18 },
+        { _id: 'preserve_4b59', _rev: '1-4823', name: 'Mango Chutney', sodum: 0.21 }
     ];
     var collectionRows = collection.map(function (element) {
         return { doc: element };
     });
-    var updateSeq = 3;
+    var updateSeq = 4;
     var getCollectionBody = { update_seq: updateSeq, rows: collectionRows };
 
+    var changesResults = [
+        { seq: 4, id: 'preserve_ace2',   changes: [{ rev: '2-9f9c' }] },
+        { seq: 5, id: 'tinned_veg_n49a', changes: [{ rev: '4-42dc' }] },
+        { seq: 6, id: 'preserve_rap2',   changes: [{ rev: '2-c90c' }], deleted: true },
+        { seq: 7, id: 'preserve_4b59',   changes: [{ rev: '4-c49d' }] }
+    ];
+    var changedPreserveIds = ['preserve_ace2', 'preserve_4b59'];
+    var getChangesBody = { last_seq: 7, results: changesResults };
+
+    var changed2ndDocId = 'preserve_rap2';
+    var changed3rdDocId = 'preserve_4b59';
+
+    var changes2ndResults = [{ seq: 8, id: changed2ndDocId, changes: [{ rev: '3-fa9d' }] }];
+    var changes3rdResults = [{ seq: 9, id: changed3rdDocId, changes: [{ rev: '5-f8da' }] }];
+
+    var get2ndChangesBody = { last_seq: 8, results: changes2ndResults };
+    var get3rdChangesBody = { last_seq: 9, results: changes3rdResults };
+
     beforeEach(function () {
+        requestFake.callbacks.reset();
         requestSpy.calls.reset();
     });
 
@@ -79,7 +101,7 @@ describe('pantry', function () {
             expect(requestSpy.calls.mostRecent().args[0]).toEqual(getCollectionOptions);
         });
 
-        it('should poll for changes after getting the update sequence', function (done) {
+        it('should poll for a change notification after getting the update sequence', function (done) {
             var getChangesOptions = {
                 method: 'GET',
                 uri: dbUrl + '/_changes?feed=longpoll&since=' + updateSeq,
@@ -89,9 +111,69 @@ describe('pantry', function () {
             pantry.contents(couchDbUrl, dbName, docLabel)
                 .onValue(function () {});
 
-            requestFake.flush(undefined, {}, getCollectionBody)
+            requestFake.callback(undefined, {}, getCollectionBody)
                 .then(function () {
                     expect(requestSpy.calls.mostRecent().args[0]).toEqual(getChangesOptions);
+                    done();
+                });
+        });
+
+        it('should get changed documents after first change notification', function (done) {
+            var optionStructs = changedPreserveIds.map(function (id) {
+                return { method: 'GET', uri: dbUrl + '/' + id, json: true };
+            });
+
+            pantry.contents(couchDbUrl, dbName, docLabel)
+                .onValue(function () {});
+
+            requestFake.callback(undefined, {}, getCollectionBody)
+                .then(function () { return requestFake.callback(undefined, {}, getChangesBody); })
+                .then(function () {
+                    expect(hasBeenPassedFirstArgs(requestSpy, optionStructs)).toBeTruthy();
+                    done();
+                });
+        });
+
+        it('should poll for changes after each subsequent change notification', function (done) {
+            var get2ndChangesOptions = {
+                method: 'GET',
+                uri: dbUrl + '/_changes?feed=longpoll&since=' + getChangesBody.last_seq,
+                json: true
+            };
+
+            var get3rdChangesOptions = {
+                method: 'GET',
+                uri: dbUrl + '/_changes?feed=longpoll&since=' + get2ndChangesBody.last_seq,
+                json: true
+            };
+
+            var get2ndChangedDocsOptions = {
+                method: 'GET',
+                uri: dbUrl + '/' + changed2ndDocId,
+                json: true
+            };
+
+            var get3rdChangedDocsOptions = {
+                method: 'GET',
+                uri: dbUrl + '/' + changed3rdDocId,
+                json: true
+            };
+
+            pantry.contents(couchDbUrl, dbName, docLabel)
+                .onValue(function () {});
+
+            requestFake.callback(undefined, {}, getCollectionBody)
+                .then(function () {
+                    return requestFake.callback(undefined, {}, getChangesBody);
+                }).then(function () {
+                    expect(hasBeenPassedFirstArgs(requestSpy, [get2ndChangesOptions])).toBeTruthy();
+                    return requestFake.callback(undefined, {}, get2ndChangesBody);
+                }).then(function () {
+                    expect(hasBeenPassedFirstArgs(requestSpy, [get3rdChangesOptions, get2ndChangedDocsOptions])).toBeTruthy();
+                    return requestFake.callback(undefined, {}, get3rdChangesBody);
+                })
+                .then(function () {
+                    expect(hasBeenPassedFirstArgs(requestSpy, [get3rdChangedDocsOptions])).toBeTruthy();
                     done();
                 });
         });
@@ -111,7 +193,7 @@ describe('pantry', function () {
                 pantry.contents(couchDbUrl, dbName, docLabel)
                     .onValue(function (value) { lastValue = value; });
 
-                requestFake.flush(undefined, {}, getCollectionBody)
+                requestFake.callback(undefined, {}, getCollectionBody)
                     .then(function () {
                         expect(lastValue).toEqual(collection);
                         done();
@@ -156,7 +238,7 @@ describe('pantry', function () {
 
             pantry.put(couchDbUrl, dbName, docLabel, newDoc);
 
-            requestFake.flush(null, {}, uuidResponseBody)
+            requestFake.callback(null, {}, uuidResponseBody)
                 .then(function () {
                     expect(requestSpy.calls.mostRecent().args[0]).toEqual(putDocOptions);
                     done();
@@ -183,7 +265,7 @@ describe('pantry', function () {
                         done();
                     });
 
-                requestFake.flush(addrNotFoundErr, {}, undefined);
+                requestFake.callback(addrNotFoundErr, {}, undefined);
             });
 
             it('should resolve with a struct containing id and revision when the http put succeeds', function (done) {
@@ -193,7 +275,7 @@ describe('pantry', function () {
                         done();
                     });
 
-                requestFake.flush(undefined, {}, putNewDocResponseBody);
+                requestFake.callback(undefined, {}, putNewDocResponseBody);
             });
         });
     });
