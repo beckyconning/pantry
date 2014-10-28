@@ -42,6 +42,7 @@ describe('pantry', function () {
         var exampleView = { update_seq: exampleUpdateSeq, rows: exampleRows };
 
         var exampleChanged1stIds = ['preserve_ace2', 'preserve_4b59'];
+        var irrelevantChanged1stId = 'tinned_veg_n49a';
         var exampleChanged2ndDocId = 'preserve_rap2';
         var changed3rdDocId = 'preserve_4b59';
 
@@ -112,6 +113,23 @@ describe('pantry', function () {
                     optionStructs.forEach(function (optionStruct) {
                         expect(passedFirstArg(requestSpy, optionStruct)).toBeTruthy();
                     });
+                    done();
+                });
+        });
+
+        it('should not get changed docs that are not labelled with the supplied label', function (done) {
+            var options =
+                { method: 'GET', uri: dbUrl + '/' + irrelevantChanged1stId, json: true };
+
+            pantry
+                .contents(couchDbUrl, dbName, docLabel)
+                .onValue(function () {});
+
+            requestFake
+                .callback(undefined, {}, exampleView)
+                .then(function () { return requestFake.callback(undefined, {}, get1stChangesBody); })
+                .then(function () {
+                    expect(passedFirstArg(requestSpy, options)).toBeFalsy();
                     done();
                 });
         });

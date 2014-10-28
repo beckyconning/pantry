@@ -69,14 +69,13 @@ var contents = T.func([T.Url, T.Str, T.Str], T.Property)
         var initialView = getView(dbUrl, docLabel);
 
         // Pluck the initial docs from initialView
-        var initialDocs = initialView.pluck('rows').transform().pluck('doc');
+        var initialDocs = initialView.pluck('rows').flatten().pluck('doc');
 
         // Pluck the initial update sequence from initialView and use it to start getting changes
         var changes = initialView.pluck('update_seq').flatMapLatest(getChanges(dbUrl, docLabel));
 
         // Pluck the changed docs from changes and filter out the ones without the right label
-        // TODO: failing test for irrelevant docs
-        var changedDocIds         = changes.pluck('results').transform().pluck('id');
+        var changedDocIds         = changes.pluck('results').flatten().pluck('id');
         var relevantChangedDocIds = changedDocIds.filter(startsWith(docLabel));
         var relevantChangedDocs   = relevantChangedDocIds.flatMap(getDoc(dbUrl));
 

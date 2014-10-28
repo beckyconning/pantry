@@ -31,7 +31,7 @@
     "kefir": "^0.2.9",
     "object-merge": "^2.5.1",
     "request": "^2.45.0",
-    "tcomb": "https://github.com/gcanti/tcomb/tarball/321b2fcf3cc7ff1efe0d6fa8a453028fa2609f02",
+    "tcomb": "https://github.com/gcanti/tcomb/tarball/80679a50ed8b18a183dc2624f4bcd15aaed1df1c",
     "underscore": "^1.7.0",
     "valid-url": "^1.0.9"
   },

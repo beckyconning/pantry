@@ -11,6 +11,6 @@ T.Promise     = T.subtype(T.Obj, function (o) { return o instanceof Promise;    
 T.Url         = T.subtype(T.Str, function (s) { return validUrl.isWebUri(s);                }, 'Url');
 T.ExistingDoc = T.subtype(T.Obj, function (o) { return T.Str.is(o._id) && T.Str.is(o._rev); }, 'ExistingDoc');
 
-T.Collection = T.dict(T.ExistingDoc, 'Collection');
+T.Collection = T.dict(T.Str, T.ExistingDoc, 'Collection');
 
 module.exports = T;
