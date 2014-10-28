@@ -1,6 +1,6 @@
 'use strict';
 
-// TODO: refactor enclosed functions and test them seperately
+// TODO: refactor tests
 describe('pantry', function () {
     var proxyquire = require('proxyquire');
 
