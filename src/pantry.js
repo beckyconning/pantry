@@ -62,7 +62,7 @@ var updateCollectionWithDoc = T.func([T.Collection, T.ExistingDoc], T.Collection
     });
 
 // Return a Kefir Property which represents a collection of the latest values of the docs
-// in the specified database which have ids labelled with the specifified label.
+// in the specified database which have ids labelled with the specified label.
 var contents = T.func([T.Url, T.Str, T.Str], T.Property)
     .of(function (couchDbUrl, dbName, docLabel) {
         var dbUrl       = couchDbUrl + '/' + dbName;
