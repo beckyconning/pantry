@@ -75,9 +75,10 @@ var contents = T.func([T.Url, T.Str, T.Str], T.Property)
         var changes = initialView.pluck('update_seq').flatMapLatest(getChanges(dbUrl, docLabel));
 
         // Pluck the changed docs from changes and filter out the ones without the right label
+        // TODO: failing test for irrelevant docs
         var changedDocIds         = changes.pluck('results').transform().pluck('id');
         var relevantChangedDocIds = changedDocIds.filter(startsWith(docLabel));
-        var relevantChangedDocs   = changedDocIds.flatMap(getDoc(dbUrl));
+        var relevantChangedDocs   = relevantChangedDocIds.flatMap(getDoc(dbUrl));
 
         // Merge the initial docs and any relevant docs that were changed after
         var docs = initialDocs.merge(relevantChangedDocs)
