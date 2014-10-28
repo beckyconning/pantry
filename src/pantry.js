@@ -79,9 +79,11 @@ var contents = T.func([T.Url, T.Str, T.Str], T.Property)
         var relevantChangedDocIds = changedDocIds.filter(startsWith(docLabel));
         var relevantChangedDocs   = changedDocIds.flatMap(getDoc(dbUrl));
 
-        // Merge the initial docs and any docs that were changed after and put them into a
-        // collection that starts off empty
-        return initialDocs.merge(relevantChangedDocs).scan({}, updateCollectionWithDoc);
+        // Merge the initial docs and any relevant docs that were changed after
+        var docs = initialDocs.merge(relevantChangedDocs)
+
+        // Return a collection of docs which starts empty
+        return docs.scan({}, updateCollectionWithDoc);
     });
 
 var labelId = T.func([T.Str, T.Str], T.Str)
@@ -92,6 +94,7 @@ var putDocWithId = T.func([T.Url, T.Obj, T.Str], T.Promise)
         var url     = dbUrl + '/' + id;
         var options = { method: 'PUT', json: true, uri: url, body: doc };
 
+        // Return the body of the response
         return requestPromise(options).get(1);
     });
 
@@ -100,10 +103,11 @@ var getUuid = T.func(T.Url, T.Promise)
         var url     = couchDbUrl + '/_uuids';
         var options = { method: 'GET', json: true, uri: url };
 
+        // Return the first UUID from the body of the response
         return requestPromise(options).get(1).get('uuids').get(0);
     });
 
-// Put a doc into the database with a labelled id
+// Put a doc into the specified database with a labelled id
 var put = T.func([T.Url, T.Str, T.Str, T.Obj], T.Promise)
     .of(function (couchDbUrl, dbName, docLabel, doc) {
         var dbUrl = couchDbUrl + '/' + dbName;
