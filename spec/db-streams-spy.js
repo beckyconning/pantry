@@ -1,14 +1,14 @@
 var Kefir = require('kefir');
 var T     = require('tcomb');
 
-var getViewSpy         = function () { return this.viewEmitter; };
-var getChangedDocsSpy  = function () { return this.changedDocsEmitter; };
+var getViewFake        = function () { return this.viewEmitter; };
+var getChangedDocsFake = function () { return this.changedDocsEmitter; };
 
 var getView = T.func([T.Str, T.Str], T.Obj)
-    .of(function (x, y) { return this.getViewSpy(x, y); });
+    .of(function (x, y) { return this.viewSpy(x, y); });
 
 var getChangedDocs = T.func([T.Str, T.Str, T.Num], T.Obj)
-    .of(function (x, y, z) { return this.getChangedDocsSpy(x, y, z); });
+    .of(function (x, y, z) { return this.changedDocsSpy(x, y, z); });
 
 var initEmitters = function () {
     this.viewEmitter        = Kefir.emitter();
@@ -20,7 +20,7 @@ module.exports = {
     changedDocsEmitter: undefined,
     getView:            getView,
     getChangedDocs:     getChangedDocs,
-    getViewSpy:         jasmine.createSpy('getViewSpy').and.callFake(getViewSpy),
-    getChangedDocsSpy:  jasmine.createSpy('getChangedDocSpy').and.callFake(getChangedDocsSpy),
+    getViewSpy:            jasmine.createSpy('getView').and.callFake(getViewFake)
+    getChangedDocsSpy:     jasmine.createSpy('getChangedDocs').and.callFake(getChangedDocsFake),
     initEmitters:       initEmitters
 };

@@ -8,7 +8,7 @@ var Kefir    = require('kefir');
 T.Property = T.subtype(T.Obj, function (o) { return o instanceof Kefir.Property;         }, 'Property');
 T.Stream   = T.subtype(T.Obj, function (o) { return o instanceof Kefir.Stream;           }, 'Stream');
 T.Promise  = T.subtype(T.Obj, function (o) { return o instanceof Promise;                }, 'Promise');
-T.Url      = T.subtype(T.Str, function (s) { return validUrl.isWebUri(s);                }, 'Url');
+T.WebUri   = T.subtype(T.Str, function (s) { return validUrl.isWebUri(s);                }, 'WebUri');
 T.Doc      = T.subtype(T.Obj, function (o) { return T.Str.is(o._id) && T.Str.is(o._rev); }, 'Doc');
 
 T.Change       = T.struct({ 'rev': T.Str });
@@ -32,6 +32,40 @@ T.stream = function (type) {
     };
 
     return Stream;
+};
+
+// `property` combinator, makes property values typesafe
+T.property = function (type) {
+    if (!T.Type.is(type)) {
+        throw new TypeError('Incorrect `type` argument supplied to `property` combinator');
+    }
+
+    var Property = function (property) { return T.Property(property).map(type); };
+
+    Stream.meta = { kind: 'property', type: type };
+
+    Property.is = function (x) {
+      return T.Property.is(x) && x.type === type;
+    };
+
+    return Property;
+};
+
+// `promise` combinator, makes promise values typesafe
+T.promise = function (type) {
+    if (!T.Type.is(type)) {
+        throw new TypeError('Incorrect `type` argument supplied to `promise` combinator');
+    }
+
+    var Promise = function (promise) { return T.Promise(promise).then(type); };
+
+    Promise.meta = { kind: 'promise', type: type };
+
+    Promise.is = function (x) {
+      return T.Promise.is(x) && x.type === type;
+    };
+
+    return Promise;
 };
 
 module.exports = T;

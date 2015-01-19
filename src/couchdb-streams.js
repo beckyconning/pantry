@@ -50,7 +50,7 @@ var getDoc = T.func([T.Url, T.Str, T.Str], T.stream(T.Doc))
     });
 
 // Wrapper for getDoc that uses a `Result`
-var getDocFromResult = T.func([T.Url, T.Result], T.Stream)
+var getDocFromResult = T.func([T.Url, T.Result], T.stream(T.Doc))
     .of(function (dbUrl, result) {
         return getDoc(dbUrl, result.id, result.changes[0].rev);
     });

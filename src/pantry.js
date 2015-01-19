@@ -18,7 +18,7 @@ var updateCollectionWithDoc = T.func([T.Collection, T.Doc], T.Collection)
 
 // Return a Kefir Property which represents a collection of the latest values of the `Doc`s
 // in the specified database which have ids labelled with the specified label.
-var contents = T.func([T.Url, T.Str, T.Str], T.Property)
+var contents = T.func([T.Url, T.Str, T.Str], T.property(T.Collection))
     .of(function (couchDbUrl, dbName, docLabel) {
         var dbUrl = couchDbUrl + '/' + dbName;
 
@@ -39,8 +39,8 @@ var contents = T.func([T.Url, T.Str, T.Str], T.Property)
 var labelId = T.func([T.Str, T.Str], T.Str)
     .of(function (docLabel, uuid) { return docLabel + '_' + uuid });
 
-// Put a doc into the specified database with a labelled id
-var put = T.func([T.Url, T.Str, T.Str, T.Obj], T.Promise)
+// Put a doc into the specified database with a labelled id and resolve with its revision
+var put = T.func([T.Url, T.Str, T.Str, T.Obj], T.promise(T.Str))
     .of(function (couchDbUrl, dbName, docLabel, doc) {
         var dbUrl = couchDbUrl + '/' + dbName;
 

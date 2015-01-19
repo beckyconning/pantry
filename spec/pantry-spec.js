@@ -1,24 +1,27 @@
 'use strict';
 
 describe('pantry', function () {
-    var proxyquire         = require('proxyquire');
-    var Kefir              = require('kefir');
-    var Promise            = require('bluebird');
-    var T                  = require('tcomb');
+    var proxyquire     = require('proxyquire');
+    var Kefir          = require('kefir');
+    var Promise        = require('bluebird');
+    var T              = require('tcomb');
 
-    var passedFirstArg     = require('./passed-first-arg');
-    var dbStreamsData      = require('./db-streams-fake-data');
+    var passedFirstArg = require('./passed-first-arg');
+    var dbStreamsData  = require('./db-streams-fake-data');
 
-    var couchDbUrl         = 'http://example.com';
-    var dbName             = 'username_public';
-    var dbUrl              = couchDbUrl + '/' + dbName;
-    var docLabel           = 'preserve';
+    var couchDbUrl     = 'http://example.com';
+    var dbName         = 'username_public';
+    var dbUrl          = couchDbUrl + '/' + dbName;
+    var docLabel       = 'preserve';
 
-    // Overide types that use `instanceof` as proxyquire can create duplicate contructors
-    var typesMock          = { Property: T.Obj, Stream: T.Obj, Promise: T.Obj };
-    var dbStreamsSpy       = require('./db-streams-spy');
-    var mocks              = { './pantry-types': typesMock, './couchdb-streams': dbStreamsSpy };
-    var pantry             = proxyquire('../src/pantry', mocks);
+    // Mock for types that use `instanceof` as proxyquire can create duplicate contructors
+    var typesMock      = { Property: T.Obj, Stream: T.Obj, Promise: T.Obj };
+
+    // Spy for `db-streams` with exposed emitters to control the streams
+    var dbStreamsSpy   = require('./db-streams-spy');
+
+    var mocks          = { './pantry-types': typesMock, './couchdb-streams': dbStreamsSpy };
+    var pantry         = proxyquire('../src/pantry', mocks);
 
     beforeEach(function () {
         dbStreamsSpy.initEmitters();
@@ -27,6 +30,7 @@ describe('pantry', function () {
     describe('contents', function () {
         var contents;
 
+        // Call `contents` and assign a listener stub to make the stream active.
         beforeEach(function () {
             contents = pantry.contents(couchDbUrl, dbName, docLabel).onValue(function () {});
         });
@@ -35,8 +39,7 @@ describe('pantry', function () {
             expect(dbStreamsSpy.getViewSpy).toHaveBeenCalledWith(dbUrl, docLabel);
         });
 
-        it('should start getting changed docs after getting the update sequence', function (done) {
-            console.log();
+        it('should call `this.getChangedDocs` after receiving the initial view', function (done) {
             dbStreamsSpy.viewEmitter.onValue(function (view) {
                 var updateSeq = view['update_seq'];
                 var expectedArgs = [dbUrl, docLabel, updateSeq];
