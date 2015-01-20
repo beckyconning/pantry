@@ -28,10 +28,10 @@
   "dependencies": {
     "bluebird": "^2.3.6",
     "browser-request": "^0.3.2",
-    "kefir": "^0.2.9",
+    "kefir": "^0.5.3",
     "object-merge": "^2.5.1",
     "request": "^2.45.0",
-    "tcomb": "https://github.com/gcanti/tcomb/tarball/80679a50ed8b18a183dc2624f4bcd15aaed1df1c",
+    "tcomb": "^0.4.0",
     "underscore": "^1.7.0",
     "valid-url": "^1.0.9"
   },

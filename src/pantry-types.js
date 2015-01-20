@@ -5,17 +5,21 @@ var validUrl = require('valid-url');
 var Promise  = require('bluebird');
 var Kefir    = require('kefir');
 
-T.Property = T.subtype(T.Obj, function (o) { return o instanceof Kefir.Property;         }, 'Property');
-T.Stream   = T.subtype(T.Obj, function (o) { return o instanceof Kefir.Stream;           }, 'Stream');
-T.Promise  = T.subtype(T.Obj, function (o) { return o instanceof Promise;                }, 'Promise');
-T.WebUri   = T.subtype(T.Str, function (s) { return validUrl.isWebUri(s);                }, 'WebUri');
-T.Doc      = T.subtype(T.Obj, function (o) { return T.Str.is(o._id) && T.Str.is(o._rev); }, 'Doc');
+T.Property = T.irreducible('Property', function (o) { return o instanceof Kefir.Property; });
+T.Stream   = T.irreducible('Stream', function (o) { return o instanceof Kefir.Stream; });
+T.Promise  = T.irreducible('Promise', function (o) { return o instanceof Promise; });
 
+T.WebUri = T.subtype(T.Str, function (s) { return !!validUrl.isWebUri(s); }, 'WebUri');
+T.Doc    = T.subtype(T.Obj, function (o) { return T.Str.is(o._id) && T.Str.is(o._rev); }, 'Doc');
+
+T.Response     = T.struct({ 'statusCode': T.Num, 'body': T.Obj });
 T.Change       = T.struct({ 'rev': T.Str });
 T.Result       = T.struct({ 'seq': T.Num, 'id': T.Str, 'deleted': T.maybe(T.Bool), 'changes': T.list(T.Change) });
 T.Notification = T.struct({ 'last_seq': T.Num, 'results': T.list(T.Result) });
-T.View         = T.struct({ 'update_seq': T.Num, 'rows': T.list(T.Doc) });
-T.Collection   = T.dict(T.Str, T.Doc, 'Collection');
+T.Row          = T.struct({ 'doc': T.Doc });
+T.View         = T.struct({ 'update_seq': T.Num, 'rows': T.list(T.Row) });
+
+T.Collection = T.dict(T.Str, T.Doc, 'Collection');
 
 // `stream` combinator, makes stream values typesafe
 T.stream = function (type) {
@@ -42,7 +46,7 @@ T.property = function (type) {
 
     var Property = function (property) { return T.Property(property).map(type); };
 
-    Stream.meta = { kind: 'property', type: type };
+    Property.meta = { kind: 'property', type: type };
 
     Property.is = function (x) {
       return T.Property.is(x) && x.type === type;

@@ -6,53 +6,50 @@ var Kefir   = require('kefir');
 var T       = require('./pantry-types.js');
 var request = require('request');
 
-// Wrapper for `request` that calls the provided callback with the resulting body
-var requestBody = function (options, callback) {
-    request(options, function (error, response, body) {
-        callback(body);
-    });
-};
-
 // Get the view from the database (contains rows for collection and update sequence)
-var getView = T.func([T.Url, T.Str], T.stream(T.View))
-    .of(function (dbUrl, docLabel) {
-        var startkeyPair    = 'startkey="' + docLabel + '_"';
-        var endkeyPair      = 'endkey="' + docLabel + '_\ufff0"';
+var getView = T.func([T.WebUri, T.Str], T.stream(T.View))
+    .of(function (dbUri, docLabel) {
+        var startkeyPair    = 'startkey="' + docLabel + '-"';
+        var endkeyPair      = 'endkey="' + docLabel + '-\ufff0"';
         var updateSeqPair   = 'update_seq=true';
         var includeDocsPair = 'include_docs=true';
         var keyValuePairs   = [startkeyPair, endkeyPair, updateSeqPair, includeDocsPair];
         var query           = '?' + keyValuePairs.join('&');
-        var uri             = dbUrl + '/_all_docs' + query;
+        var uri             = dbUri + '/_all_docs' + query;
         var options         = { method: 'GET', json: true, uri: uri };
+        var requestView     = function (callback) { request(options, callback) };
 
-        return Kefir.fromCallback([requestBody, null, options])
+        return Kefir.fromNodeCallback(requestView).pluck('body');
     });
 
 // Long poll sequentially for change notifications from the database
-var getNotifications = T.func([T.Url, T.Num], T.stream(T.Notification))
-    .of(function (dbUrl, updateSeq) {
-        var uri              = dbUrl + '/_changes?feed=longpoll&since=' + updateSeq;
-        var options          = { method: 'GET', json: true, uri: uri };
-        var notification     = Kefir.fromCallback([requestBody, null, options]);
-        var updateSeq        = changeNotification.pluck('last_seq')
-        var nextNotification = updateSeq.flatMapLatest(getChangeNotifications(dbUrl, docLabel));
+var getNotifications = T.func([T.WebUri, T.Num], T.stream(T.Notification))
+    .of(function (dbUri, updateSeq) {
+        var uri                 = dbUri + '/_changes?feed=longpoll&since=' + updateSeq;
+        var options             = { method: 'GET', json: true, uri: uri };
+        var requestNotification = function (callback) { request(options, callback) };
+        var notification        = Kefir.fromNodeCallback(requestNotification).pluck('body');
+        var updateSeq           = notification.pluck('last_seq');
+        var nextNotification    = updateSeq.flatMapLatest(getNotifications(dbUri));
 
-        return notification.merge(nextNotification)
+        return notification.merge(nextNotification);
     });
 
 // Get a `Doc` from the database
-var getDoc = T.func([T.Url, T.Str, T.Str], T.stream(T.Doc))
-    .of(function (dbUrl, id, rev) {
-        var uri     = dbUrl + '/' + id + '?rev=' + rev;
-        var options = { method: 'GET', json: true, uri: uri };
+var getDoc = T.func([T.WebUri, T.Str, T.Str], T.stream(T.Doc))
+    .of(function (dbUri, id, rev) {
+        var uri        = dbUri + '/' + id + '?rev=' + rev;
+        var options    = { method: 'GET', json: true, uri: uri };
+        var requestDoc = function (callback) { request(options, callback) };
 
-        return Kefir.fromCallback([requestBody, null, options]);
+        return Kefir.fromNodeCallback(requestDoc).pluck('body');
     });
 
 // Wrapper for getDoc that uses a `Result`
-var getDocFromResult = T.func([T.Url, T.Result], T.stream(T.Doc))
-    .of(function (dbUrl, result) {
-        return getDoc(dbUrl, result.id, result.changes[0].rev);
+var getDocFromResult = T.func([T.WebUri, T.Result], T.stream(T.Doc))
+    .of(function (dbUri, result) {
+        // This doesn't deal with revision conflicts
+        return getDoc(dbUri, result.id, result.changes[0].rev);
     });
 
 // Check if an `Str` starts with another
@@ -62,19 +59,19 @@ var startsWith = T.func([T.Str, T.Str], T.Bool)
     });
 
 // Get `Result`s relating to to `Doc`s which are labelled with the provided label
-var getResults = T.func([T.Url, T.Str, T.Num], T.stream(T.Doc))
-    .of(function (dbUrl, docLabel, updateSeq) {
-        var notifications     = getNotifications(dbUrl, updateSeq);
-        var results           = notifications.pluck('results');
+var getResults = T.func([T.WebUri, T.Str, T.Num], T.stream(T.Result))
+    .of(function (dbUri, docLabel, updateSeq) {
+        var notifications     = getNotifications(dbUri, updateSeq);
+        var results           = notifications.pluck('results').flatten();
         var resultRelevancies = results.pluck('id').map(startsWith(docLabel));
         return results.filterBy(resultRelevancies);
     });
 
 // Get the `Docs`s which are labelled with the provided label that have changed
-var getChangedDocs = T.func([T.Url, T.Str, T.Num], T.stream(T.Doc))
-    .of(function (dbUrl, docLabel, updateSeq) {
-        var resultsWithLabel = getResultsWithLabel(dbUrl, docLabel, updateSeq);
-        return resultsWithLabel.flatMap(getDocFromResult(dbUrl));
+var getChangedDocs = T.func([T.WebUri, T.Str, T.Num], T.stream(T.Doc))
+    .of(function (dbUri, docLabel, updateSeq) {
+        var resultsWithLabel = getResults(dbUri, docLabel, updateSeq);
+        return resultsWithLabel.flatMap(getDocFromResult(dbUri));
     });
 
 module.exports = { getView: getView, getChangedDocs: getChangedDocs };
