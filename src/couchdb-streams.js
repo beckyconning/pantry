@@ -6,6 +6,37 @@ var Kefir   = require('kefir');
 var T       = require('./pantry-types.js');
 var request = require('request');
 
+var successfulHttpStatusCode = T.func(T.Num, T.Bool)
+    .of(function(httpStatusCode) {
+        return Math.floor(httpStatusCode / 100) === 2;
+    });
+
+var throwIfUnsuccessfulResponse = T.func([T.Response, T.Any], T.Response)
+    .of(function(response, body) {
+        if (successfulHttpStatusCode(response.statusCode)) { return response; }
+        else { throw new Error('HTTP Error:' + body); }
+    });
+
+var getUuid = T.func(T.WebUri, T.stream(T.Str))
+    .of(function (couchDbUri) {
+        var url     = couchDbUri + '/_uuids';
+        var options = { method: 'GET', json: true, uri: url };
+
+        var requestUuid = function (callback) { request(options, callback); };
+
+        return Kefir.fromNodeCallback(requestUuid).pluck('body').pluck('uuids').flatten();
+    });
+
+var putDoc = T.func([T.WebUri, T.Obj, T.Str], T.stream(T.Str))
+    .of(function (dbUri, doc, id) {
+        var url     = dbUri + '/' + id;
+        var options = { method: 'PUT', json: true, uri: url, body: doc };
+
+        var requestDoc = function (callback) { request(options, callback); };
+
+        return Kefir.fromNodeCallback(requestDoc).pluck('body').pluck('rev');
+    });
+
 // Get the view from the database (contains rows for collection and update sequence)
 var getView = T.func([T.WebUri, T.Str], T.stream(T.View))
     .of(function (dbUri, docLabel) {
@@ -74,4 +105,4 @@ var getChangedDocs = T.func([T.WebUri, T.Str, T.Num], T.stream(T.Doc))
         return resultsWithLabel.flatMap(getDocFromResult(dbUri));
     });
 
-module.exports = { getView: getView, getChangedDocs: getChangedDocs };
+module.exports = { getView: getView, getDoc: getDoc, getChangedDocs: getChangedDocs, getUuid: getUuid, putDoc: putDoc };
